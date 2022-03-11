@@ -1,7 +1,9 @@
 import os
 import cv2
 
-from .detectron import run_detectron
+from .tflite import TFLiteModel
+
+# from .detectron import run_detectron
 
 
 def get_images_in_folder(folder):
@@ -16,6 +18,10 @@ def get_images_in_folder(folder):
 
 def get_frames_in_video(video):
     cap = cv2.VideoCapture(video)
+    if video == 0:
+        print("Setting capture size!")
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -25,9 +31,11 @@ def get_frames_in_video(video):
 
 
 def get_frames_in_input(path):
-    if os.path.isdir(path):
+    if path is None:
+        it = get_frames_in_video(0)
+    elif os.path.isdir(path):
         it = get_images_in_folder(path)
-    else:
+    elif os.path.isfile(path):
         it = get_frames_in_video(path)
     return it
 
@@ -40,15 +48,32 @@ def resize_to_width(width, image):
     return cv2.resize(image, (w, h), interpolation=cv2.INTER_LINEAR)
 
 
-def show_input(path, mode):
+def crop_image(image, size):
+    h, w, _ = image.shape
+    w_pad = int((w - size[0]) / 2.0)
+    h_pad = int((h - size[1]) / 2.0)
+
+    return image[h_pad : h_pad + size[1], w_pad : w_pad + size[0]]
+
+
+def show_input(path, mode, tflite_model):
     it = get_frames_in_input(path)
 
+    model = TFLiteModel(tflite_model)
+    input_size = model.input_size
+
     for name, image in it:
+        if mode == "detectron2":
+            raise NotImplementedError()
+            # run_detectron(image)
+
+        image = crop_image(image, input_size)
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        model.run_inference(rgb_image)
+        image = model.draw_results(image)
+
         image = resize_to_width(1280, image)
         cv2.imshow(name, image)
-
-        if mode == "detectron2":
-            run_detectron(image)
 
         # Quit or paus.
         key = cv2.waitKey(10)
