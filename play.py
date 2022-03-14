@@ -12,12 +12,11 @@ parser.add_argument(
     type=str,
     help="Input: file or directory containing images/video. Video device 0 will be used if not specified.",
 )
-parser.add_argument("-m", dest="mode", type=str, help="Mode.")
 parser.add_argument("--tflite", type=str, help="Tflite model file path.")
 
 
 def main(args):
-    show_input(args.input, args.mode, args.tflite)
+    show_input(args.input, args.tflite)
 
 
 if __name__ == "__main__":

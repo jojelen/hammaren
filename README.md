@@ -5,7 +5,13 @@ Utility library that serves as a template for computer-vision projects.
 
 ## Install
 
-### Tflite EdgeTPU
+### Dependencies
+
+- python3.7
+- OpenCV
+- TensorflowLite (optional)
+
+#### Tflite EdgeTPU
 
 We use the [coral API](https://coral.ai/docs/accelerator/get-started/#pycoral-on-linux)
 for running models on the EdgeTPU. To install these dependencies, on Debian,

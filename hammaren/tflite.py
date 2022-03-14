@@ -54,7 +54,7 @@ def load_tflite_model(model_path):
 class TFLiteModel:
     def __init__(self, model_path):
         self._interpreter = load_tflite_model(model_path)
-        self._threshold = 0.5
+        self._threshold = 0.1
         self._labels = read_label_file("models/coco-labels.txt")
         self.input_size = input_size(self._interpreter)
 

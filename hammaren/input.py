@@ -1,7 +1,7 @@
 import os
 import cv2
 
-from .tflite import TFLiteModel
+from .fps import FPSCounter
 
 # from .detectron import run_detectron
 
@@ -56,23 +56,33 @@ def crop_image(image, size):
     return image[h_pad : h_pad + size[1], w_pad : w_pad + size[0]]
 
 
-def show_input(path, mode, tflite_model):
+def make_square(image):
+    h, w, _ = image.shape
+    min = h if h < w else w
+
+    return crop_image(image, [min, min])
+
+
+def show_input(path, tflite_model):
     it = get_frames_in_input(path)
 
-    model = TFLiteModel(tflite_model)
-    input_size = model.input_size
+    if tflite_model:
+        from .tflite import TFLiteModel
+        model = TFLiteModel(tflite_model)
+        input_size = model.input_size
 
+    fps_counter = FPSCounter()
     for name, image in it:
-        if mode == "detectron2":
-            raise NotImplementedError()
-            # run_detectron(image)
+        image = make_square(image)
 
-        image = crop_image(image, input_size)
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        model.run_inference(rgb_image)
-        image = model.draw_results(image)
+        if tflite_model:
+            rgb_image = cv2.resize(image, input_size, interpolation=cv2.INTER_LINEAR)
+            rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+            model.run_inference(rgb_image)
+            image = model.draw_results(image)
 
-        image = resize_to_width(1280, image)
+        image = resize_to_width(800, image)
+        image = fps_counter.draw_fps(image)
         cv2.imshow(name, image)
 
         # Quit or paus.
@@ -83,3 +93,4 @@ def show_input(path, mode, tflite_model):
             while True:
                 if cv2.waitKey(10) & 0xFF == ord("p"):
                     break
+        fps_counter.end_frame()
