@@ -2,6 +2,8 @@ import os
 import cv2
 
 from .fps import FPSCounter
+from .utils import draw_objects
+from .tracker import Tracker
 
 # from .detectron import run_detectron
 
@@ -56,11 +58,14 @@ def crop_image(image, size):
     return image[h_pad : h_pad + size[1], w_pad : w_pad + size[0]]
 
 
-def make_square(image):
+def make_square(image, center=False):
     h, w, _ = image.shape
-    min = h if h < w else w
+    smallest = h if h < w else w
 
-    return crop_image(image, [min, min])
+    if center:
+        return crop_image(image, [smallest, smallest])
+    else:
+        return image[:smallest,:smallest]
 
 
 def show_input(path, tflite_model):
@@ -70,6 +75,9 @@ def show_input(path, tflite_model):
         from .tflite import TFLiteModel
         model = TFLiteModel(tflite_model)
         input_size = model.input_size
+        labels = model.labels
+
+    tracker = Tracker()
 
     fps_counter = FPSCounter()
     for name, image in it:
@@ -78,8 +86,11 @@ def show_input(path, tflite_model):
         if tflite_model:
             rgb_image = cv2.resize(image, input_size, interpolation=cv2.INTER_LINEAR)
             rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-            model.run_inference(rgb_image)
-            image = model.draw_results(image)
+            objects = model.run_inference(rgb_image, score_threshold=0.5)
+
+            tracker.add_detections(objects)
+
+            image = draw_objects(image, objects, input_size, labels)
 
         image = resize_to_width(800, image)
         image = fps_counter.draw_fps(image)
