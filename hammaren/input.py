@@ -68,8 +68,7 @@ def make_square(image, center=False):
         return image[:smallest,:smallest]
 
 
-def show_input(path, tflite_model):
-    it = get_frames_in_input(path)
+def show_input(path, tflite_model, algorithms, loop):
 
     if tflite_model:
         from .tflite import TFLiteModel
@@ -79,29 +78,38 @@ def show_input(path, tflite_model):
 
     tracker = Tracker()
 
-    fps_counter = FPSCounter()
-    for name, image in it:
-        image = make_square(image)
 
-        if tflite_model:
-            rgb_image = cv2.resize(image, input_size, interpolation=cv2.INTER_LINEAR)
-            rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-            objects = model.run_inference(rgb_image, score_threshold=0.5)
+    while True:
+        it = get_frames_in_input(path)
+        fps_counter = FPSCounter()
+        for name, image in it:
+            for algo in algorithms:
+                algo(image)
+            if tflite_model:
+                # TODO: Remove
+                image = make_square(image)
 
-            tracker.add_detections(objects)
+                rgb_image = cv2.resize(image, input_size, interpolation=cv2.INTER_LINEAR)
+                rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+                objects = model.run_inference(rgb_image, score_threshold=0.5)
 
-            image = draw_objects(image, objects, input_size, labels)
+                tracker.add_detections(objects)
 
-        image = resize_to_width(800, image)
-        image = fps_counter.draw_fps(image)
-        cv2.imshow(name, image)
+                image = draw_objects(image, objects, input_size, labels)
 
-        # Quit or paus.
-        key = cv2.waitKey(10)
-        if key & 0xFF == ord("q"):
-            break
-        elif key & 0xFF == ord("p"):
-            while True:
-                if cv2.waitKey(10) & 0xFF == ord("p"):
-                    break
-        fps_counter.end_frame()
+            image = resize_to_width(1024, image)
+            image = fps_counter.draw_fps(image)
+            cv2.imshow(name, image)
+
+            # Quit or paus.
+            key = cv2.waitKey(10)
+            if key & 0xFF == ord("q"):
+                return
+            elif key & 0xFF == ord("p"):
+                while True:
+                    if cv2.waitKey(10) & 0xFF == ord("p"):
+                        break
+            fps_counter.end_frame()
+
+        if not loop:
+            return
